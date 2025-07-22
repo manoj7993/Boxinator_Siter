@@ -287,7 +287,6 @@ typings/
 .vscode/extensions.json
 
 # PACKAGE MANAGERS
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 

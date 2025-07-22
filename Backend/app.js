@@ -5,6 +5,9 @@ const { generalLimiter } = require('./middleware/rateLimiter');
 const sanitizeInput    = require('./middleware/sanitizeInput');
 const errorHandler     = require('./middleware/errorHandler');
 
+// Import models to initialize associations
+const models = require('./models');
+
 // Import routes
 const authRoutes       = require('./routes/authRoutes');
 const shipmentRoutes   = require('./routes/shipmentRoutes');

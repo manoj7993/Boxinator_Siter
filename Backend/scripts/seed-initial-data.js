@@ -50,7 +50,7 @@ async function seedInitialData() {
     console.log(`Seeded ${boxTypes.length} box types and ${countries.length} countries`);
     
   } catch (error) {
-    console.error('Error seeding data:', error);
+    // console.error('Error seeding data:', error);
   } finally {
     await sequelize.close();
   }

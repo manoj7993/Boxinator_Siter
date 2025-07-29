@@ -1,4 +1,4 @@
-const { Country, CountryMultiplierLog } = require('../models');
+const { Country, CountryMultiplierLog, BoxType } = require('../models');
 const Joi = require('joi');
 
 const updateCountrySchema = Joi.object({
@@ -12,12 +12,29 @@ class SettingsController {
   static async getCountries(req, res, next) {
     try {
       const countries = await Country.findAll({
+        where: { isActive: true },
         order: [['name', 'ASC']]
       });
 
       res.json({
         success: true,
         countries
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getBoxTypes(req, res, next) {
+    try {
+      const boxTypes = await BoxType.findAll({
+        where: { isActive: true },
+        order: [['baseCost', 'ASC']]
+      });
+
+      res.json({
+        success: true,
+        boxTypes
       });
     } catch (error) {
       next(error);

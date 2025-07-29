@@ -1,28 +1,26 @@
 // src/services/costCalculator.js
-const { Country, WeightTier } = require('../models');
+const { Country, BoxType } = require('../models');
 
 class CostCalculator {
   /**
-   * Calculate shipping cost based on destination and weight tier
+   * Calculate shipping cost based on destination and box type
    */
-  static async calculateCost(destinationCountryId, weightTierCode) {
+  static async calculateCost(countryId, boxTypeId) {
     try {
       // Get country with multiplier
-      const country = await Country.findByPk(destinationCountryId);
+      const country = await Country.findByPk(countryId);
       if (!country) {
         throw new Error('Invalid destination country');
       }
 
-      // Get weight tier pricing
-      const weightTier = await WeightTier.findOne({
-        where: { code: weightTierCode }
-      });
-      if (!weightTier) {
-        throw new Error('Invalid weight tier');
+      // Get box type pricing
+      const boxType = await BoxType.findByPk(boxTypeId);
+      if (!boxType) {
+        throw new Error('Invalid box type');
       }
 
       // Calculate final cost: base price * country multiplier
-      const baseCost = parseFloat(weightTier.price);
+      const baseCost = parseFloat(boxType.baseCost);
       const multiplier = parseFloat(country.multiplier);
       const finalCost = baseCost * multiplier;
 
@@ -32,7 +30,7 @@ class CostCalculator {
         finalCost: parseFloat(finalCost.toFixed(2)),
         currency: 'USD', // or get from config
         country: country.name,
-        weightTier: weightTierCode
+        boxType: boxType.name
       };
     } catch (error) {
       throw new Error(`Cost calculation failed: ${error.message}`);
@@ -40,11 +38,11 @@ class CostCalculator {
   }
 
   /**
-   * Validate weight tier code
+   * Validate box type ID
    */
-  static validateWeightTier(code) {
-    const validTiers = ['BASIC', 'HUMBLE', 'DELUXE', 'PREMIUM'];
-    return validTiers.includes(code);
+  static async validateBoxType(boxTypeId) {
+    const boxType = await BoxType.findByPk(boxTypeId);
+    return !!boxType;
   }
 
   /**

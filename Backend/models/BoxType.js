@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
-const User = sequelize.define('User', {
+const BoxType = sequelize.define('BoxType', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -10,51 +10,26 @@ const User = sequelize.define('User', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: {
-      len: [2, 100],
-    },
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
     unique: true,
     validate: {
-      isEmail: true,
+      isIn: [['Small', 'Medium', 'Large', 'Extra Large']],
     },
   },
-  password: {
+  size: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: {
-      len: [8, 255],
-    },
+    comment: 'Box dimensions in format: LxWxH cm',
   },
-  address: {
-    type: DataTypes.TEXT,
-    allowNull: false,
-  },
-  phone: {
-    type: DataTypes.STRING,
+  baseCost: {
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
     validate: {
-      is: /^[\+]?[1-9][\d]{0,15}$/,
+      min: 0,
     },
-  },
-  role: {
-    type: DataTypes.ENUM('user', 'admin'),
-    defaultValue: 'user',
-    allowNull: false,
-  },
-  isEmailVerified: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
   },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
-  },
-  lastLoginAt: {
-    type: DataTypes.DATE,
   },
   createdAt: {
     type: DataTypes.DATE,
@@ -65,8 +40,8 @@ const User = sequelize.define('User', {
     defaultValue: DataTypes.NOW,
   },
 }, {
-  tableName: 'users',
+  tableName: 'box_types',
   timestamps: true,
 });
 
-module.exports = User;
+module.exports = BoxType;

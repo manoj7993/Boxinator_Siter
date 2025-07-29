@@ -21,7 +21,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user    = await User.findByPk(decoded.userId);
+    const user    = await User.findByPk(decoded.id);
 
     if (!user) {
       return res.status(401).json({
@@ -34,7 +34,10 @@ const authenticateToken = async (req, res, next) => {
     req.user = {
       id:           user.id,
       email:        user.email,
-      accountType:  user.accountType
+      name:         user.name,
+      address:      user.address,
+      phone:        user.phone,
+      role:         user.role || 'user'
     };
     next();
   } catch (err) {
@@ -46,7 +49,7 @@ const authenticateToken = async (req, res, next) => {
 };
 
 const requireAdmin = (req, res, next) => {
-  if (req.user?.accountType !== 'ADMINISTRATOR') {
+  if (req.user?.role !== 'admin') {
     return res.status(403).json({
       success: false,
       message: 'Administrator access required'
@@ -55,7 +58,45 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+/**
+ * Optional authentication - allows both guests and authenticated users
+ */
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.split(' ')[1];
+
+  if (!token) {
+    // No token provided, continue as guest
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+
+    if (user) {
+      req.user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        address: user.address,
+        phone: user.phone,
+        role: user.role || 'user'
+      };
+    } else {
+      req.user = null;
+    }
+  } catch (err) {
+    // Invalid token, continue as guest
+    req.user = null;
+  }
+
+  next();
+};
+
 module.exports = {
   authenticateToken,
-  requireAdmin
+  requireAdmin,
+  optionalAuth
 };

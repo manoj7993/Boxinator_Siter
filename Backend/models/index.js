@@ -6,6 +6,7 @@ const UserProfile = require('./UserProfile');
 const Shipment = require('./Shipment');
 const Country = require('./Country');
 const WeightTier = require('./WeightTier');
+const BoxType = require('./BoxType');
 const ShipmentStatus = require('./ShipmentStatus');
 const ShipmentStatusHistory = require('./ShipmentStatusHistory');
 const EmailVerificationToken = require('./EmailVerificationToken');
@@ -28,6 +29,10 @@ Shipment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // Country - Shipment associations
 Country.hasMany(Shipment, { foreignKey: 'countryId', as: 'shipments' });
 Shipment.belongsTo(Country, { foreignKey: 'countryId', as: 'country' });
+
+// BoxType - Shipment associations
+BoxType.hasMany(Shipment, { foreignKey: 'boxTypeId', as: 'shipments' });
+Shipment.belongsTo(BoxType, { foreignKey: 'boxTypeId', as: 'boxType' });
 
 // ShipmentStatus - Shipment associations
 ShipmentStatus.hasMany(Shipment, { foreignKey: 'currentStatusId', as: 'shipments' });
@@ -83,6 +88,7 @@ module.exports = {
   Shipment,
   Country,
   WeightTier,
+  BoxType,
   ShipmentStatus,
   ShipmentStatusHistory,
   EmailVerificationToken,

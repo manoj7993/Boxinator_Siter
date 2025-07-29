@@ -46,6 +46,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/auth', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    message: 'auth router working',
+    database: 'Connected to PostgreSQL with Sequelize'
+  });
+});
+
 // Mount API routes
 app.use('/api/auth',     authRoutes);
 app.use('/api/shipments', shipmentRoutes);

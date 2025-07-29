@@ -1,19 +1,41 @@
-const { Shipment, Country, WeightTier, ShipmentStatus, ShipmentStatusHistory, CostAudit } = require('../models');
+const { Shipment, Country, BoxType, ShipmentStatus, ShipmentStatusHistory, CostAudit, User } = require('../models');
 const CostCalculator = require('../services/costCalculator');
 const Joi = require('joi');
 
 const createShipmentSchema = Joi.object({
-  receiverName: Joi.string().min(2).max(120).required(),
-  destinationCountryId: Joi.number().integer().positive().required(),
-  weightTierCode: Joi.string().valid('BASIC', 'HUMBLE', 'DELUXE', 'PREMIUM').required(),
-  boxColor: Joi.string().pattern(/^#([A-Fa-f0-9]{8}|[A-Fa-f0-9]{6})$/).required(),
-  guestEmail: Joi.string().email().optional()
+  // Sender info (required for guest users, optional for registered users)
+  senderName: Joi.string().min(2).max(100).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderEmail: Joi.string().email().when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderPhone: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderAddress: Joi.string().min(5).max(500).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderCity: Joi.string().min(2).max(100).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderPostalCode: Joi.string().min(2).max(20).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  senderCountry: Joi.string().min(2).max(100).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
+  
+  // Receiver info (always required)
+  receiverName: Joi.string().min(2).max(100).required(),
+  receiverEmail: Joi.string().email().required(),
+  receiverPhone: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/).required(),
+  receiverAddress: Joi.string().min(5).max(500).required(),
+  receiverCity: Joi.string().min(2).max(100).required(),
+  receiverPostalCode: Joi.string().min(2).max(20).required(),
+  receiverCountry: Joi.string().min(2).max(100).required(),
+  
+  // Box and destination
+  boxTypeId: Joi.number().integer().positive().required(),
+  countryId: Joi.number().integer().positive().required()
 });
 
 class ShipmentController {
   static async createShipment(req, res, next) {
     try {
-      const { error, value } = createShipmentSchema.validate(req.body);
+      const userId = req.user?.id;
+      const isGuest = !userId;
+
+      const { error, value } = createShipmentSchema.validate(req.body, { 
+        context: { isGuest } 
+      });
+      
       if (error) {
         return res.status(400).json({
           success: false,
@@ -22,78 +44,154 @@ class ShipmentController {
         });
       }
 
-      const { receiverName, destinationCountryId, weightTierCode, boxColor, guestEmail } = value;
-      const userId = req.user?.id;
+      const { 
+        senderName, senderEmail, senderPhone, senderAddress, senderCity, senderPostalCode, senderCountry,
+        receiverName, receiverEmail, receiverPhone, receiverAddress, receiverCity, receiverPostalCode, receiverCountry,
+        boxTypeId, countryId 
+      } = value;
 
-      // Validate guest email requirement
-      if (!userId && !guestEmail) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email is required for guest shipments'
-        });
+      // Get user data if registered user
+      let senderData = {};
+      if (!isGuest) {
+        const user = await User.findByPk(userId);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+        senderData = {
+          senderName: user.name,
+          senderEmail: user.email,
+          senderPhone: user.phone,
+          senderAddress: user.address,
+          senderCity: user.address.split(',')[1]?.trim() || 'Not specified',
+          senderPostalCode: 'Not specified',
+          senderCountry: user.address.split(',').pop()?.trim() || 'Not specified'
+        };
+      } else {
+        senderData = {
+          senderName, senderEmail, senderPhone, senderAddress, senderCity, senderPostalCode, senderCountry
+        };
       }
 
-      // Get country and weight tier for cost calculation
-      const [country, weightTier] = await Promise.all([
-        Country.findByPk(destinationCountryId),
-        WeightTier.findByPk(weightTierCode)
+      // Get country and box type for cost calculation
+      const [country, boxType] = await Promise.all([
+        Country.findByPk(countryId),
+        BoxType.findByPk(boxTypeId)
       ]);
 
-      if (!country || !weightTier) {
+      if (!country || !boxType) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid country or weight tier'
+          message: 'Invalid country or box type'
         });
       }
 
       // Calculate shipping cost
-      const cost = CostCalculator.calculateShippingCost(
-        weightTierCode,
-        country.multiplier,
-        country.isSourceCountry
-      );
+      const cost = parseFloat((boxType.baseCost * country.multiplier).toFixed(2));
 
-      // Create shipment in transaction
-      const result = await sequelize.transaction(async (t) => {
-        const shipment = await Shipment.create({
-          userId: userId || null,
-          guestEmail: guestEmail || null,
-          receiverName,
-          destinationCountryId,
-          weightTierCode,
-          boxColor,
-          cost,
-          currentStatusCode: 'CREATED'
-        }, { transaction: t });
+      // Generate tracking number
+      const trackingNumber = 'BX' + Date.now() + Math.random().toString(36).substr(2, 4).toUpperCase();
 
-        // Create initial status history
-        await ShipmentStatusHistory.create({
-          shipmentId: shipment.id,
-          statusCode: 'CREATED',
-          changedByUserId: userId || null
-        }, { transaction: t });
-
-        // Create cost audit record
-        await CostAudit.create({
-          shipmentId: shipment.id,
-          flatFee: 200,
-          multiplier: country.multiplier,
-          weight: weightTier.weight,
-          totalCost: cost
-        }, { transaction: t });
-
-        return shipment;
+      // Create shipment
+      const shipment = await Shipment.create({
+        userId: userId || null,
+        guestEmail: isGuest ? senderEmail : null,
+        trackingNumber,
+        ...senderData,
+        receiverName,
+        receiverEmail,
+        receiverPhone,
+        receiverAddress,
+        receiverCity,
+        receiverPostalCode,
+        receiverCountry,
+        boxTypeId,
+        countryId,
+        cost,
+        currentStatusId: 1 // Assuming 1 is 'Created' status
       });
-
-      // Send confirmation email
-      const email = userId ? req.user.email : guestEmail;
-      await emailService.sendShipmentConfirmation(email, result, cost);
 
       res.status(201).json({
         success: true,
         message: 'Shipment created successfully',
-        shipment: result,
-        totalCost: cost
+        shipment: {
+          id: shipment.id,
+          trackingNumber: shipment.trackingNumber,
+          cost: shipment.cost,
+          boxType: boxType.name,
+          destination: country.name,
+          receiver: receiverName
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getShipmentHistory(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const shipments = await Shipment.findAll({
+        where: { userId },
+        include: [
+          { model: Country, as: 'country' },
+          { model: BoxType, as: 'boxType' }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+
+      res.json({
+        success: true,
+        shipments: shipments.map(shipment => ({
+          id: shipment.id,
+          trackingNumber: shipment.trackingNumber,
+          receiverName: shipment.receiverName,
+          destination: shipment.country.name,
+          boxType: shipment.boxType.name,
+          cost: shipment.cost,
+          date: shipment.createdAt
+        }))
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async calculateCost(req, res, next) {
+    try {
+      const { boxTypeId, countryId } = req.body;
+
+      if (!boxTypeId || !countryId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Box type and country are required'
+        });
+      }
+
+      const [country, boxType] = await Promise.all([
+        Country.findByPk(countryId),
+        BoxType.findByPk(boxTypeId)
+      ]);
+
+      if (!country || !boxType) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid country or box type'
+        });
+      }
+
+      const cost = parseFloat((boxType.baseCost * country.multiplier).toFixed(2));
+
+      res.json({
+        success: true,
+        cost,
+        boxType: boxType.name,
+        country: country.name,
+        baseCost: boxType.baseCost,
+        multiplier: country.multiplier
       });
     } catch (error) {
       next(error);

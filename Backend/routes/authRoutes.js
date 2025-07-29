@@ -12,7 +12,7 @@ const router = express.Router();
 // ----- Public -----
 router.post('/register', authLimiter, AuthController.register);
 router.post('/login',  authLimiter, AuthController.login);
-router.get ('/verify/:token', AuthController.verifyEmail);
+router.get('/verify/:token', AuthController.verifyEmail);
 
 // ----- Protected (require valid JWT) -----
 // TODO: Implement these methods in AuthController

@@ -1,4 +1,4 @@
-const { sequelize } = require('../config/database');
+const { sequelize, supabase } = require('../config/database');
 
 // Import all models here
 const User = require('./User');
@@ -78,6 +78,7 @@ CountryMultiplierLog.belongsTo(User, { foreignKey: 'changedBy', as: 'changedByUs
 // Export all models
 module.exports = {
   sequelize,
+  supabase,
   User,
   UserProfile,
   Shipment,

@@ -9,6 +9,15 @@ const { authLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
+// Handle preflight requests for all auth routes
+router.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
 // ----- Public -----
 router.post('/register', authLimiter, AuthController.register);
 router.post('/login',  authLimiter, AuthController.login);

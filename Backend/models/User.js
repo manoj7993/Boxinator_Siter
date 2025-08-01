@@ -19,12 +19,12 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [8, 255],
+      len: [6, 255],
     },
   },
   role: {
-    type: DataTypes.ENUM('user', 'admin'),
-    defaultValue: 'user',
+    type: DataTypes.ENUM('user', 'admin', 'customer', 'guest'),
+    defaultValue: 'customer',
     allowNull: false,
   },
   isEmailVerified: {

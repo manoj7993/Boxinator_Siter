@@ -10,6 +10,7 @@ const router = express.Router();
 
 // ----- Public -----
 router.get('/countries', SettingsController.getCountries);
+router.get('/box-types', SettingsController.getBoxTypes);
 
 // ----- Admin-protected -----
 router.use(authenticateToken);

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 const { sequelize, User, UserProfile, EmailVerificationToken } = require('../models');
+const SupabaseUserService = require('../services/supabaseUserService');
 // const { emailService } = require('../services/emailService'); // Comment out until service is created
 const Joi = require('joi');
 
@@ -10,9 +11,15 @@ const registerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required(),
+  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required()
+    .messages({
+      'string.min': 'Password must be at least 8 characters long',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      'any.required': 'Password is required'
+    }),
   dateOfBirth: Joi.date().optional(),
   countryOfResidence: Joi.string().optional(),
+  contactCountry: Joi.string().optional(), // Add this field that frontend is sending
   zipCode: Joi.string().optional(),
   contactNumber: Joi.string().optional()
 });
@@ -27,15 +34,62 @@ class AuthController {
     try {
       const { error, value } = registerSchema.validate(req.body);
       if (error) {
+        console.log('❌ Validation error:', error.details);
+        const errorMessages = error.details.map(detail => ({
+          field: detail.path[0],
+          message: detail.message
+        }));
         return res.status(400).json({
           success: false,
           message: 'Validation error',
-          errors: error.details
+          errors: errorMessages,
+          details: error.details // Keep original for debugging
         });
       }
 
-      const { email, password, firstName, lastName, ...profileData } = value;
+      const { email, password, firstName, lastName, contactCountry, countryOfResidence, ...profileData } = value;
       
+      // Map contactCountry to countryOfResidence if needed
+      const country = contactCountry || countryOfResidence;
+      
+      // Use Supabase API if in API-only mode
+      if (process.env.USE_SUPABASE_API_ONLY === 'true') {
+        console.log('🔗 Using Supabase API for registration');
+        console.log('📋 Registration data:', { email, firstName, lastName, country, ...profileData });
+        
+        try {
+          const result = await SupabaseUserService.registerUser({
+            email,
+            password,
+            firstName,
+            lastName,
+            countryOfResidence: country, // Use the mapped country value
+            ...profileData
+          });
+          
+          console.log('✅ Registration successful:', result);
+          return res.status(201).json({
+            success: true,
+            message: 'Registration successful. Check email for verification.'
+          });
+        } catch (error) {
+          console.error('❌ Supabase registration error:', error.message);
+          console.error('Full error:', error);
+          if (error.message === 'Email already registered') {
+            return res.status(409).json({
+              success: false,
+              message: 'Email already registered'
+            });
+          }
+          return res.status(500).json({
+            success: false,
+            message: 'Registration failed. Please try again.',
+            error: error.message // Add error details for debugging
+          });
+        }
+      }
+      
+      // Original Sequelize logic (fallback)
       // Check if user already exists
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
@@ -98,6 +152,56 @@ class AuthController {
 
       const { email, password } = value;
 
+      // Use Supabase API if in API-only mode
+      if (process.env.USE_SUPABASE_API_ONLY === 'true') {
+        try {
+          const user = await SupabaseUserService.findUserByEmail(email);
+          
+          if (!user || !await bcrypt.compare(password, user.password)) {
+            return res.status(401).json({
+              success: false,
+              message: 'Invalid credentials'
+            });
+          }
+
+          if (!user.is_email_verified) {
+            return res.status(403).json({
+              success: false,
+              message: 'Please verify your email before logging in'
+            });
+          }
+
+          // Generate JWT token
+          const token = jwt.sign(
+            { 
+              userId: user.id,
+              accountType: user.role
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+
+          return res.json({
+            success: true,
+            token,
+            user: {
+              id: user.id,
+              email: user.email,
+              accountType: user.role,
+              profile: user.profile?.[0] || null
+            },
+            accountType: user.role
+          });
+        } catch (error) {
+          console.error('Supabase login error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Login failed. Please try again.'
+          });
+        }
+      }
+
+      // Original Sequelize logic (fallback)
       // Find user with profile
       const user = await User.findOne({ 
         where: { email },

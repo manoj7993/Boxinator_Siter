@@ -15,7 +15,7 @@ const Joi = require('joi');
 class AdminController {
   // Middleware to ensure only administrators can access these endpoints
   static requireAdmin(req, res, next) {
-    if (req.user.accountType !== 'ADMINISTRATOR') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Administrator access required'
@@ -35,7 +35,7 @@ class AdminController {
         recentShipments,
         topCountries
       ] = await Promise.all([
-        User.count({ where: { accountType: { [Op.ne]: 'GUEST' } } }),
+        User.count({ where: { role: { [Op.ne]: 'guest' } } }),
         Shipment.count(),
         Shipment.count({ where: { currentStatusCode: { [Op.in]: ['CREATED', 'RECEIVED', 'INTRANSIT'] } } }),
         Shipment.count({ where: { currentStatusCode: 'COMPLETED' } }),
@@ -202,13 +202,13 @@ class AdminController {
   // GET /admin/users - View all users with filtering
   static async getAllUsers(req, res, next) {
     try {
-      const { accountType, verified, page = 1, limit = 20 } = req.query;
+      const { role, verified, page = 1, limit = 20 } = req.query;
       
       let whereClause = {};
       
-      // Account type filter
-      if (accountType) {
-        whereClause.accountType = accountType;
+      // Role filter
+      if (role) {
+        whereClause.role = role;
       }
 
       // Email verification filter
@@ -221,7 +221,7 @@ class AdminController {
       const { rows: users, count: totalCount } = await User.findAndCountAll({
         where: whereClause,
         include: [{ model: UserProfile, as: 'profile' }],
-        attributes: { exclude: ['passwordHash'] },
+        attributes: { exclude: ['password'] },
         order: [['createdAt', 'DESC']],
         limit: parseInt(limit),
         offset
@@ -373,7 +373,7 @@ class AdminController {
           model: User, 
           as: 'actor',
           include: [{ model: UserProfile, as: 'profile' }],
-          attributes: { exclude: ['passwordHash'] }
+          attributes: { exclude: ['password'] }
         }],
         order: [['actionAt', 'DESC']],
         limit: parseInt(limit),
@@ -522,7 +522,7 @@ class AdminController {
           data = await User.findAll({
             where: whereClause,
             include: [{ model: UserProfile, as: 'profile' }],
-            attributes: { exclude: ['passwordHash'] }
+            attributes: { exclude: ['password'] }
           });
           filename = `users_${new Date().toISOString().split('T')[0]}`;
           break;

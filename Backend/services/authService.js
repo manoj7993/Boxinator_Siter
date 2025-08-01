@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { User, UserProfile, EmailVerificationToken, PasswordResetToken, RefreshToken } = require('../models');
+const { User, UserProfile, EmailVerificationToken, PasswordResetToken, RefreshToken, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 class AuthService {
@@ -25,8 +25,8 @@ class AuthService {
     const result = await sequelize.transaction(async (t) => {
       const user = await User.create({
         email,
-        passwordHash,
-        accountType: 'REGISTERED_USER'
+        password: passwordHash,
+        role: 'user'
       }, { transaction: t });
 
       await UserProfile.create({
@@ -51,7 +51,7 @@ class AuthService {
       include: [{ model: UserProfile, as: 'profile' }]
     });
 
-    if (!user || !await bcrypt.compare(password, user.passwordHash)) {
+    if (!user || !await bcrypt.compare(password, user.password)) {
       throw new Error('Invalid credentials');
     }
 
@@ -69,7 +69,7 @@ class AuthService {
     return jwt.sign(
       { 
         userId: user.id,
-        accountType: user.accountType
+        role: user.role
       },
       process.env.JWT_SECRET,
       { expiresIn }
@@ -162,7 +162,7 @@ class AuthService {
 
     await sequelize.transaction(async (t) => {
       await User.update(
-        { passwordHash },
+        { password: passwordHash },
         { where: { id: resetToken.userId }, transaction: t }
       );
 
@@ -184,13 +184,13 @@ class AuthService {
       throw new Error('User not found');
     }
 
-    const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
       throw new Error('Current password is incorrect');
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await user.update({ passwordHash });
+    await user.update({ password: passwordHash });
 
     return true;
   }

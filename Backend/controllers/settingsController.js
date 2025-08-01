@@ -1,4 +1,4 @@
-const { Country, CountryMultiplierLog } = require('../models');
+const { Country, CountryMultiplierLog, BoxType } = require('../models');
 const Joi = require('joi');
 
 const updateCountrySchema = Joi.object({
@@ -11,6 +11,7 @@ const updateCountrySchema = Joi.object({
 class SettingsController {
   static async getCountries(req, res, next) {
     try {
+<<<<<<< HEAD
       // Since we're using Supabase API-only mode, we need to fetch from Supabase directly
       const { supabase } = require('../config/database');
       
@@ -19,6 +20,12 @@ class SettingsController {
           .from('countries')
           .select('*')
           .order('name', { ascending: true });
+=======
+      const countries = await Country.findAll({
+        where: { isActive: true },
+        order: [['name', 'ASC']]
+      });
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
 
         if (error) {
           throw new Error(error.message);
@@ -93,6 +100,22 @@ class SettingsController {
           boxTypes
         });
       }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getBoxTypes(req, res, next) {
+    try {
+      const boxTypes = await BoxType.findAll({
+        where: { isActive: true },
+        order: [['baseCost', 'ASC']]
+      });
+
+      res.json({
+        success: true,
+        boxTypes
+      });
     } catch (error) {
       next(error);
     }

@@ -21,6 +21,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+<<<<<<< HEAD
     
     let user;
     
@@ -52,14 +53,30 @@ const authenticateToken = async (req, res, next) => {
           message: 'Invalid token'
         });
       }
+=======
+    const user    = await User.findByPk(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
     }
 
     /* attach context */
     req.user = {
       id:           user.id,
       email:        user.email,
+<<<<<<< HEAD
       role:         user.role,
       accountType:  user.role // For compatibility
+=======
+      name:         user.name,
+      address:      user.address,
+      phone:        user.phone,
+      role:         user.role || 'user'
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
     };
     next();
   } catch (err) {
@@ -80,19 +97,30 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+<<<<<<< HEAD
 // Optional authentication - sets req.user if token is provided, but doesn't fail if missing
+=======
+/**
+ * Optional authentication - allows both guests and authenticated users
+ */
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
 const optionalAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.split(' ')[1];
 
   if (!token) {
+<<<<<<< HEAD
     // No token provided - continue as guest
+=======
+    // No token provided, continue as guest
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
     req.user = null;
     return next();
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+<<<<<<< HEAD
     
     // Use Supabase API if in API-only mode
     if (process.env.USE_SUPABASE_API_ONLY === 'true') {
@@ -135,6 +163,27 @@ const optionalAuth = async (req, res, next) => {
     req.user = null;
   }
   
+=======
+    const user = await User.findByPk(decoded.id);
+
+    if (user) {
+      req.user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        address: user.address,
+        phone: user.phone,
+        role: user.role || 'user'
+      };
+    } else {
+      req.user = null;
+    }
+  } catch (err) {
+    // Invalid token, continue as guest
+    req.user = null;
+  }
+
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
   next();
 };
 

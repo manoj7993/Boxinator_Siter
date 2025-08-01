@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
+<<<<<<< HEAD
     "start": "node server.js",
     "setup:supabase": "node setup-supabase.js",
     "setup:supabase:complete": "node setup-supabase-complete.js",
@@ -11,6 +12,10 @@
     "setup:guide": "node supabase-setup-guide.js",
     "check-supabase": "node check-supabase.js",
     "db:test": "node -e \"const {sequelize} = require('./config/database'); sequelize.authenticate().then(() => console.log('✅ DB Connected!')).catch(err => console.error('❌ DB Error:', err.message))\"",
+=======
+    "start": "nodemon server.js",
+    "reset-db": "node scripts/reset-database.js",
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -23,7 +28,7 @@
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^4.21.2",
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",

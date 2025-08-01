@@ -16,6 +16,6 @@ router.get('/box-types', SettingsController.getBoxTypes);
 router.use(authenticateToken);
 
 router.post('/countries',            SettingsController.createCountry);        // admin only
-router.put ('/countries/:id',        SettingsController.updateCountry);        // admin only
+router.put('/countries/:id',        SettingsController.updateCountry);        // admin only
 
 module.exports = router;

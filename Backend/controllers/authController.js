@@ -8,9 +8,9 @@ const SupabaseUserService = require('../services/supabaseUserService');
 const Joi = require('joi');
 
 const registerSchema = Joi.object({
-  firstName: Joi.string().min(2).max(100).required(),
-  lastName: Joi.string().min(2).max(100).required(),
+  name: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
+<<<<<<< HEAD
   password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required()
     .messages({
       'string.min': 'Password must be at least 8 characters long',
@@ -22,6 +22,11 @@ const registerSchema = Joi.object({
   contactCountry: Joi.string().optional(), // Add this field that frontend is sending
   zipCode: Joi.string().optional(),
   contactNumber: Joi.string().optional()
+=======
+  password: Joi.string().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).required(),
+  address: Joi.string().min(5).max(500).required(),
+  phone: Joi.string().pattern(/^[\+]?[1-9][\d]{0,15}$/).required()
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
 });
 
 const loginSchema = Joi.object({
@@ -47,7 +52,11 @@ class AuthController {
         });
       }
 
+<<<<<<< HEAD
       const { email, password, firstName, lastName, contactCountry, countryOfResidence, ...profileData } = value;
+=======
+      const { email, password, name, address, phone } = value;
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
       
       // Map contactCountry to countryOfResidence if needed
       const country = contactCountry || countryOfResidence;
@@ -102,38 +111,37 @@ class AuthController {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 12);
 
-      // Create user and profile in transaction
-      const result = await sequelize.transaction(async (t) => {
-        const user = await User.create({
-          email,
-          passwordHash,
-          accountType: 'REGISTERED_USER'
-        }, { transaction: t });
-
-        await UserProfile.create({
-          userId: user.id,
-          firstName,
-          lastName,
-          ...profileData
-        }, { transaction: t });
-
-        // Create email verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        await EmailVerificationToken.create({
-          userId: user.id,
-          token: verificationToken,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-        }, { transaction: t });
-
-        return { user, verificationToken };
+      // Create user
+      const user = await User.create({
+        name,
+        email,
+        password: passwordHash,
+        address,
+        phone
       });
 
-      // Send verification email (commented out until email service is created)
-      // await emailService.sendVerificationEmail(email, result.verificationToken);
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          id: user.id, 
+          email: user.email,
+          name: user.name 
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
       res.status(201).json({
         success: true,
-        message: 'Registration successful. Check email for verification.'
+        message: 'Registration successful',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          address: user.address,
+          phone: user.phone
+        },
+        token
       });
     } catch (error) {
       next(error);
@@ -152,6 +160,7 @@ class AuthController {
 
       const { email, password } = value;
 
+<<<<<<< HEAD
       // Use Supabase API if in API-only mode
       if (process.env.USE_SUPABASE_API_ONLY === 'true') {
         try {
@@ -203,45 +212,45 @@ class AuthController {
 
       // Original Sequelize logic (fallback)
       // Find user with profile
+=======
+      // Find user
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
       const user = await User.findOne({ 
-        where: { email },
-        include: [{ model: UserProfile, as: 'profile' }]
+        where: { email }
       });
 
-      if (!user || !await bcrypt.compare(password, user.passwordHash)) {
+      if (!user || !await bcrypt.compare(password, user.password)) {
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
         });
       }
 
-      if (!user.isEmailVerified) {
-        return res.status(403).json({
-          success: false,
-          message: 'Please verify your email before logging in'
-        });
-      }
-
       // Generate JWT token
       const token = jwt.sign(
         { 
-          userId: user.id,
-          accountType: user.accountType
+          id: user.id,
+          email: user.email,
+          name: user.name
         },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
+      // Update last login
+      await user.update({ lastLoginAt: new Date() });
+
       res.json({
         success: true,
+        message: 'Login successful',
         token,
         user: {
           id: user.id,
+          name: user.name,
           email: user.email,
-          accountType: user.accountType,
-          profile: user.profile
-        },
-        accountType: user.accountType
+          address: user.address,
+          phone: user.phone
+        }
       });
     } catch (error) {
       next(error);

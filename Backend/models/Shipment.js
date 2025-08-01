@@ -9,10 +9,17 @@ const Shipment = sequelize.define('Shipment', {
   },
   userId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Allow null for guest users
     references: {
       model: 'users',
       key: 'id',
+    },
+  },
+  guestEmail: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    validate: {
+      isEmail: true,
     },
   },
   trackingNumber: {
@@ -21,6 +28,17 @@ const Shipment = sequelize.define('Shipment', {
     unique: true,
   },
   senderName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  senderEmail: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      isEmail: true,
+    },
+  },
+  senderPhone: {
     type: DataTypes.STRING,
     allowNull: false,
   },
@@ -44,6 +62,17 @@ const Shipment = sequelize.define('Shipment', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  receiverEmail: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      isEmail: true,
+    },
+  },
+  receiverPhone: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   receiverAddress: {
     type: DataTypes.TEXT,
     allowNull: false,
@@ -60,6 +89,14 @@ const Shipment = sequelize.define('Shipment', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  boxTypeId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'box_types',
+      key: 'id',
+    },
+  },
   countryId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -67,20 +104,6 @@ const Shipment = sequelize.define('Shipment', {
       model: 'countries',
       key: 'id',
     },
-  },
-  weight: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    validate: {
-      min: 0.01,
-    },
-  },
-  dimensions: {
-    type: DataTypes.JSON,
-    comment: 'Length, width, height in cm',
-  },
-  description: {
-    type: DataTypes.TEXT,
   },
   cost: {
     type: DataTypes.DECIMAL(10, 2),

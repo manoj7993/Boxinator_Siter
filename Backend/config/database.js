@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 require('dotenv').config();
 
+<<<<<<< HEAD
 console.log('🔧 Initializing database configuration...');
 
 // Check if we should use SQLite fallback
@@ -29,6 +30,18 @@ if (useLocalDB) {
     dialect: 'sqlite',
     storage: path.join(__dirname, '..', 'database.sqlite'),
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
+=======
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'Boxinator1',
+  process.env.DB_USER || 'postgres',
+  process.env.DB_PASSWORD || 'password',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
+    // logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: false,
+>>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
     pool: {
       max: 5,
       min: 0,

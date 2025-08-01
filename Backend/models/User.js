@@ -7,6 +7,13 @@ const User = sequelize.define('User', {
     primaryKey: true,
     autoIncrement: true,
   },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      len: [2, 100],
+    },
+  },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -20,6 +27,17 @@ const User = sequelize.define('User', {
     allowNull: false,
     validate: {
       len: [6, 255],
+    },
+  },
+  address: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      is: /^[\+]?[1-9][\d]{0,15}$/,
     },
   },
   role: {

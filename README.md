@@ -24,8 +24,8 @@ A full-stack web application for managing shipping operations with user authenti
 - **Node.js**: Runtime environment
 - **Express.js**: Web framework
 - **Sequelize**: ORM for database operations
-- **PostgreSQL**: Primary database (via Supabase)
-- **Supabase**: Database hosting and real-time features
+- **PostgreSQL**: Primary database (via Railway)
+- **Railway**: Database hosting and deployment platform
 - **JWT**: Authentication tokens
 - **bcrypt**: Password encryption
 - **Nodemailer**: Email services
@@ -107,7 +107,7 @@ Boxinator_Siter/
 ### Prerequisites
 - Node.js (v14 or higher)
 - npm or yarn
-- PostgreSQL database (or Supabase account)
+- PostgreSQL database (or Railway account)
 - Git
 
 ### 1. Clone the Repository
@@ -129,16 +129,15 @@ copy .env.example .env
 
 Configure your `.env` file:
 ```env
-# Database
+# Database Configuration
 DATABASE_URL=postgresql://username:password@localhost:5432/boxinator
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_KEY=your_supabase_service_key
+# Railway provides DATABASE_URL automatically
 
-# JWT
+# JWT Configuration
 JWT_SECRET=your_jwt_secret_key
 JWT_REFRESH_SECRET=your_refresh_secret_key
 
-# Email (optional)
+# Email Configuration (optional)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
@@ -188,17 +187,18 @@ If using VS Code, you can use the configured tasks:
 
 ### Database Setup
 
-#### Option 1: Supabase (Recommended)
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Get your project URL and service key
-3. Update `.env` files with Supabase credentials
-4. Run the setup script: `node Backend/setup-supabase.js`
+#### Option 1: Railway (Recommended)
+1. Create a new project at [railway.app](https://railway.app)
+2. Add a PostgreSQL service to your project
+3. Railway will automatically provide DATABASE_URL environment variable
+4. Copy your Railway environment variables to your `.env` file
+5. Run the application - Sequelize will create tables automatically
 
 #### Option 2: Local PostgreSQL
 1. Install PostgreSQL locally
 2. Create a database named `boxinator`
 3. Update `DATABASE_URL` in `.env`
-4. Run migrations: `npm run migrate`
+4. Run the application - Sequelize will create tables automatically
 
 ### Email Configuration
 For user registration emails, configure SMTP settings in `.env`:
@@ -270,7 +270,7 @@ SMTP_PASS=your_app_password  # Use App Password for Gmail
 
 ### Backend Deployment
 1. **Environment Variables**: Set production environment variables
-2. **Database**: Ensure PostgreSQL/Supabase is accessible
+2. **Database**: Ensure PostgreSQL/Railway is accessible
 3. **Build**: No build step needed for Node.js
 4. **Deploy**: Use services like Heroku, Railway, or DigitalOcean
 

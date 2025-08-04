@@ -1,17 +1,8 @@
-const { Shipment, Country, BoxType, ShipmentStatus, ShipmentStatusHistory, CostAudit, User } = require('../models');
+﻿const { Shipment, Country, BoxType, ShipmentStatus, ShipmentStatusHistory, CostAudit, User } = require('../models');
 const CostCalculator = require('../services/costCalculator');
 const Joi = require('joi');
 
 const createShipmentSchema = Joi.object({
-<<<<<<< HEAD
-  receiverName: Joi.string().min(2).max(120).required(),
-  weight: Joi.number().positive().required(),
-  boxTypeId: Joi.number().integer().positive().required(),
-  destinationCountryId: Joi.number().integer().positive().required(),
-  destinationCity: Joi.string().min(1).max(100).required(),
-  destinationAddress: Joi.string().min(1).max(255).required(),
-  destinationZipCode: Joi.string().min(1).max(20).required()
-=======
   // Sender info (required for guest users, optional for registered users)
   senderName: Joi.string().min(2).max(100).when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
   senderEmail: Joi.string().email().when('$isGuest', { is: true, then: Joi.required(), otherwise: Joi.optional() }),
@@ -33,19 +24,11 @@ const createShipmentSchema = Joi.object({
   // Box and destination
   boxTypeId: Joi.number().integer().positive().required(),
   countryId: Joi.number().integer().positive().required()
->>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
 });
 
 class ShipmentController {
   static async createShipment(req, res, next) {
     try {
-<<<<<<< HEAD
-      console.log('Incoming shipment data:', req.body);
-      console.log('Request user:', req.user);
-      console.log('Authorization header:', req.headers.authorization);
-      
-      const { error, value } = createShipmentSchema.validate(req.body);
-=======
       const userId = req.user?.id;
       const isGuest = !userId;
 
@@ -53,7 +36,6 @@ class ShipmentController {
         context: { isGuest } 
       });
       
->>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
       if (error) {
         return res.status(400).json({
           success: false,
@@ -63,131 +45,6 @@ class ShipmentController {
       }
 
       const { 
-<<<<<<< HEAD
-        receiverName, 
-        weight,
-        boxTypeId,
-        destinationCountryId, 
-        destinationCity,
-        destinationAddress,
-        destinationZipCode
-      } = value;
-      
-      // Get user ID - only fallback to user ID 1 if this is a guest shipment (no authentication)
-      const userId = req.user?.id;
-      console.log('User from request:', req.user);
-      console.log('User ID for shipment:', userId);
-      
-      if (!userId) {
-        console.log('No authenticated user - this is a guest shipment');
-      }
-
-      // Use Supabase API if in API-only mode
-      if (process.env.USE_SUPABASE_API_ONLY === 'true') {
-        const { supabase } = require('../config/database');
-        
-        // Get box type and country data
-        const [boxTypeResult, countryResult, statusResult] = await Promise.all([
-          supabase.from('box_types').select('*').eq('id', boxTypeId).single(),
-          supabase.from('countries').select('*').eq('id', destinationCountryId).single(),
-          supabase.from('shipment_statuses').select('*').eq('code', 'pending').single()
-        ]);
-
-        console.log('Box type result:', boxTypeResult);
-        console.log('Country result:', countryResult);
-        console.log('Status result:', statusResult);
-
-        if (boxTypeResult.error || countryResult.error || statusResult.error) {
-          console.error('Database query errors:', {
-            boxType: boxTypeResult.error,
-            country: countryResult.error,
-            status: statusResult.error
-          });
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid box type, country, or status configuration'
-          });
-        }
-
-        const boxType = boxTypeResult.data;
-        const country = countryResult.data;
-        const status = statusResult.data;
-
-        // Calculate cost: base cost * country multiplier
-        const baseCost = parseFloat(boxType.base_cost);
-        const multiplier = parseFloat(country.multiplier);
-        const totalCost = Math.round((baseCost * multiplier) * 100) / 100;
-
-        // Generate tracking number
-        const trackingNumber = 'BX' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-
-        console.log('Creating shipment with data:', {
-          user_id: userId,
-          tracking_number: trackingNumber,
-          receiver_name: receiverName,
-          receiver_address: destinationAddress,
-          receiver_city: destinationCity,
-          receiver_postal_code: destinationZipCode,
-          receiver_country: country.name,
-          country_id: destinationCountryId,
-          box_type_id: boxTypeId,
-          weight: weight,
-          cost: totalCost,
-          current_status_id: status.id
-        });
-
-        // Create shipment
-        const { data: shipment, error: shipmentError } = await supabase
-          .from('shipments')
-          .insert({
-            user_id: userId,
-            tracking_number: trackingNumber,
-            sender_name: 'Boxinator',
-            sender_address: 'Main Street 123',
-            sender_city: 'Stockholm',
-            sender_postal_code: '12345',
-            sender_country: 'Sweden',
-            receiver_name: receiverName,
-            receiver_address: destinationAddress,
-            receiver_city: destinationCity,
-            receiver_postal_code: destinationZipCode,
-            receiver_country: country.name,
-            country_id: destinationCountryId,
-            box_type_id: boxTypeId,
-            weight: weight,
-            cost: totalCost,
-            current_status_id: status.id
-          })
-          .select()
-          .single();
-
-        if (shipmentError) {
-          console.error('Shipment creation error:', shipmentError);
-          return res.status(400).json({
-            success: false,
-            message: 'Failed to create shipment',
-            error: shipmentError.message
-          });
-        }
-
-        return res.status(201).json({
-          success: true,
-          message: 'Shipment created successfully',
-          data: {
-            id: shipment.id,
-            trackingId: shipment.tracking_number,
-            cost: totalCost,
-            ...shipment
-          }
-        });
-      }
-
-      // Fallback for non-Supabase mode (keeping original logic)
-      // Get country and weight tier for cost calculation
-      const [country, weightTier] = await Promise.all([
-        Country.findByPk(destinationCountryId),
-        WeightTier.findByPk(weightTierCode)
-=======
         senderName, senderEmail, senderPhone, senderAddress, senderCity, senderPostalCode, senderCountry,
         receiverName, receiverEmail, receiverPhone, receiverAddress, receiverCity, receiverPostalCode, receiverCountry,
         boxTypeId, countryId 
@@ -222,7 +79,6 @@ class ShipmentController {
       const [country, boxType] = await Promise.all([
         Country.findByPk(countryId),
         BoxType.findByPk(boxTypeId)
->>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
       ]);
 
       if (!country || !boxType) {
@@ -260,9 +116,6 @@ class ShipmentController {
       res.status(201).json({
         success: true,
         message: 'Shipment created successfully',
-<<<<<<< HEAD
-        data: result
-=======
         shipment: {
           id: shipment.id,
           trackingNumber: shipment.trackingNumber,
@@ -273,76 +126,6 @@ class ShipmentController {
         }
       });
     } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getShipmentHistory(req, res, next) {
-    try {
-      const userId = req.user.id;
-
-      const shipments = await Shipment.findAll({
-        where: { userId },
-        include: [
-          { model: Country, as: 'country' },
-          { model: BoxType, as: 'boxType' }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
-
-      res.json({
-        success: true,
-        shipments: shipments.map(shipment => ({
-          id: shipment.id,
-          trackingNumber: shipment.trackingNumber,
-          receiverName: shipment.receiverName,
-          destination: shipment.country.name,
-          boxType: shipment.boxType.name,
-          cost: shipment.cost,
-          date: shipment.createdAt
-        }))
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async calculateCost(req, res, next) {
-    try {
-      const { boxTypeId, countryId } = req.body;
-
-      if (!boxTypeId || !countryId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Box type and country are required'
-        });
-      }
-
-      const [country, boxType] = await Promise.all([
-        Country.findByPk(countryId),
-        BoxType.findByPk(boxTypeId)
-      ]);
-
-      if (!country || !boxType) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid country or box type'
-        });
-      }
-
-      const cost = parseFloat((boxType.baseCost * country.multiplier).toFixed(2));
-
-      res.json({
-        success: true,
-        cost,
-        boxType: boxType.name,
-        country: country.name,
-        baseCost: boxType.baseCost,
-        multiplier: country.multiplier
->>>>>>> 35a05ca402893838a7737735b9ed3fae733f5343
-      });
-    } catch (error) {
-      console.error('Shipment creation error:', error);
       next(error);
     }
   }
